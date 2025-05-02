@@ -32,23 +32,52 @@ O sistema visa facilitar o processo de coleta de dados e geração de relatório
    ```bash
    cd projeto_diagnostico_api
    ```
-   
-3. Crie e ative um ambiente virtual:
+
+3. Crie um .env.local e adicione:
+   ```dotenv
+   SECRET_KEY='django-key'
+   DEBUG='True'
+
+   # Domain Settings
+   DOMAIN='domínio do frontend'
+
+   # Database Configuration
+   DB_ENGINE='django.db.backends.mysql'
+   DB_NAME='nome-bd'
+   DB_USER='user-bd'
+   DB_PASSWORD='senha-bd'
+   DB_HOST='host-bd'
+   DB_PORT='senha-bd'
+   DB_INIT_COMMAND=SET sql_mode='STRICT_TRANS_TABLES'
+
+   # Email Configuration
+   EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
+   EMAIL_HOST='serviço email'
+   EMAIL_PORT='porta'
+   EMAIL_USE_TLS='True'
+   EMAIL_HOST_USER='email@email.com'
+   EMAIL_HOST_PASSWORD='senha-email'
+
+   # Security Settings
+   AUTH_COOKIE_SECURE='False'
+   ```
+
+4. Crie e ative um ambiente virtual:
    ```bash
    python -m venv venv
    source venv/bin/activate
    ```
    
-4. Instale as dependências:
+5. Instale as dependências:
    ```bash
    pip install -r requirements.txt
    ```
-5. Configure o banco de dados no arquivo .env.local e aplique as migrações:
+6. Configure o banco de dados no arquivo .env.local e aplique as migrações:
    ```bash
    python manage.py makemigrations
    python manage.py migrate
    ```
-6. Inicie o servidor de desenvolvimento:
+7. Inicie o servidor de desenvolvimento:
    ```bash
    python manage.py runserver
    ```
