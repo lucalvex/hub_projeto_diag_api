@@ -44,6 +44,7 @@ class Dimensao(models.Model):
     id = models.AutoField(primary_key=True)
     titulo = models.CharField(max_length=255, unique=True)
     descricao = models.TextField()
+    explicacao = models.TextField(blank=True)
     tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
     modulo = models.ForeignKey(
         Modulo, on_delete=models.CASCADE, related_name='dimensoes')
@@ -67,6 +68,6 @@ class RespostaDimensao(models.Model):
 class Pergunta(models.Model):
     id = models.AutoField(primary_key=True)
     pergunta = models.TextField()
-    explicacao = models.TextField(blank=True)
+    peso = models.IntegerField(default=1)
     dimensao = models.ForeignKey(
         Dimensao, on_delete=models.CASCADE, related_name='perguntas', default=None)

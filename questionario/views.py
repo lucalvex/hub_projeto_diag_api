@@ -39,6 +39,7 @@ class QuestionarioView(APIView):
                         'dimensaoTitulo': dimensao.titulo,
                         'descricao': dimensao.descricao,
                         'tipo': dimensao.get_tipo_display(),
+                        'explicacao': dimensao.explicacao,
                     }
                     dadosDimensoes.append(dadosDimensao)
 
@@ -75,13 +76,13 @@ class ModuloView(APIView):
                     perguntasData.append({
                         'id': p.id,
                         'pergunta': p.pergunta,
-                        'explicacao': p.explicacao,
                     })
 
                 dados_dimensao = {
                     'dimensaoTitulo': dimensao.titulo,
                     'descricao': dimensao.descricao,
                     'tipo': dimensao.get_tipo_display(),
+                    'explicacao': dimensao.explicacao,
                     'perguntas': perguntasData
                 }
                 dadosDimensoes.append(dados_dimensao)
@@ -184,8 +185,9 @@ class SalvarRespostasModuloView(APIView):
 
             dimensaoObj = perguntaObj.dimensao
             dimensaoPk = dimensaoObj.pk
+            valorPonderado = valor_int * perguntaObj.peso
             somasPorDimensao[dimensaoPk] = somasPorDimensao.get(
-                dimensaoPk, 0) + valor_int
+                dimensaoPk, 0) + valorPonderado
 
         if erros:
             return Response({
