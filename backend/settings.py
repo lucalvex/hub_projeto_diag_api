@@ -19,10 +19,10 @@ if path.isfile(dotenv_file):
 SECRET_KEY = getenv('DJANGO_SECRET_KEY', get_random_secret_key())
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = getenv("DEBUG", "False") == "True"
+DEBUG = getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = getenv("DJANGO_ALLOWED_HOSTS",
-                       "127.0.0.1,localhost").split(",")
+ALLOWED_HOSTS = getenv('DJANGO_ALLOWED_HOSTS',
+                       '127.0.0.1,localhost').split(',')
 
 
 # Application definition
@@ -158,9 +158,8 @@ AUTH_COOKIE_SAMESITE = 'Lax'
 
 CORS_ALLOWED_ORIGINS = getenv(
     'CORS_ALLOWED_ORIGINS',
-    'http://localhost:3000, '
-    'https://127.0.0.1:3000'
-).split(",")
+    'http://localhost:3000, https://127.0.0.1:3000'
+).split(',')
 CORS_ALLOW_CREDENTIALS = True
 
 # Default primary key field type
@@ -168,7 +167,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-AUTH_USER_MODEL = "users.UserAccount"
+AUTH_USER_MODEL = 'users.UserAccount'
 
 # Email settings
 
