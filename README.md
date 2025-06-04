@@ -39,7 +39,7 @@ O sistema visa facilitar o processo de coleta de dados e geração de relatório
    DEBUG='True'
 
    # Domain Settings
-   DOMAIN='domínio do frontend'
+   DOMAIN='domínio do frontend, sem protocolo ou porta'
 
    # Database Configuration
    DB_ENGINE='django.db.backends.mysql'
@@ -47,7 +47,7 @@ O sistema visa facilitar o processo de coleta de dados e geração de relatório
    DB_USER='user-bd'
    DB_PASSWORD='senha-bd'
    DB_HOST='host-bd'
-   DB_PORT='senha-bd'
+   DB_PORT='porta-bd'
    DB_INIT_COMMAND=SET sql_mode='STRICT_TRANS_TABLES'
 
    # Email Configuration
@@ -57,6 +57,9 @@ O sistema visa facilitar o processo de coleta de dados e geração de relatório
    EMAIL_USE_TLS='True'
    EMAIL_HOST_USER='email@email.com'
    EMAIL_HOST_PASSWORD='senha-email'
+
+   # CORS Settings
+   CORS_ALLOWED_ORIGINS='domínios que podem consumir a API via JavaScript, coloque o protocolo e a porta'
 
    # Security Settings
    AUTH_COOKIE_SECURE='False'
@@ -81,4 +84,3 @@ O sistema visa facilitar o processo de coleta de dados e geração de relatório
    ```bash
    python manage.py runserver
    ```
-
