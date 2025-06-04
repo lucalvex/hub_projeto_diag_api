@@ -15,6 +15,9 @@ from users.models import UserAccount
 from .models import Modulo, Dimensao, Pergunta, RespostaDimensao, RespostaModulo
 from django.shortcuts import get_object_or_404
 import json
+import matplotlib.pyplot as plt
+import numpy as np
+from reportlab.lib.utils import ImageReader
 
 
 class QuestionarioView(APIView):
@@ -362,6 +365,42 @@ class GerarRelatorioModuloView(APIView):
                 if y_position < 3*cm:
                     c.showPage() 
                     y_position = height - 1.5*cm
+
+            img_width = 10 * cm
+            img_height = 10 * cm
+            x_center = (width - img_width) / 2
+            if y_position - img_height < 2*cm:
+                c.showPage()
+                y_position = height - 2*cm
+
+            labels = [resp.dimensao.titulo for resp in respostas_dimensoes]
+            values = [resp.valorFinal for resp in respostas_dimensoes]
+            if len(labels) < 3:
+                labels += [''] * (3 - len(labels))
+                values += [0] * (3 - len(values))
+            num_vars = len(labels)
+
+            angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
+            values += values[:1]
+            angles += angles[:1]
+
+            fig, ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(polar=True))
+            ax.plot(angles, values, color='#4bd360', linewidth=2)
+            ax.fill(angles, values, color='#4bd360', alpha=0.25)
+            ax.set_xticks(angles[:-1])
+            ax.set_xticklabels(labels, fontsize=10)
+            ax.set_yticklabels([])
+            ax.set_title('Desempenho por Dimensão', y=1.08)
+            plt.tight_layout()
+
+            img_buffer = io.BytesIO()
+            plt.savefig(img_buffer, format='PNG', bbox_inches='tight', dpi=120)
+            plt.close(fig)
+            img_buffer.seek(0)
+            radar_img = ImageReader(img_buffer)
+
+            c.drawImage(radar_img, x_center, y_position - img_height, width=img_width, height=img_height)
+            y_position -= (img_height + 0.5*cm)
 
             c.save()
 
