@@ -385,8 +385,8 @@ class GerarRelatorioModuloView(APIView):
             angles += angles[:1]
 
             fig, ax = plt.subplots(figsize=(5, 5), subplot_kw=dict(polar=True))
-            ax.plot(angles, values, color='#4bd360', linewidth=2)
-            ax.fill(angles, values, color='#4bd360', alpha=0.25)
+            ax.plot(angles, values, color='#058aff', linewidth=2)
+            ax.fill(angles, values, color='#058aff', alpha=0.25)
             ax.set_xticks(angles[:-1])
             ax.set_xticklabels(labels, fontsize=10)
             ax.set_yticklabels([])
