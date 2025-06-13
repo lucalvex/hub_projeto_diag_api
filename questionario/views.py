@@ -60,7 +60,6 @@ class QuestionarioView(APIView):
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
 class ModuloView(APIView):
     permission_classes = [AllowAny]
 
@@ -102,7 +101,6 @@ class ModuloView(APIView):
                 {'error': f'Ocorreu um erro interno no servidor: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
 
 class SalvarRespostasModuloView(APIView):
     permission_classes = [IsAuthenticated]

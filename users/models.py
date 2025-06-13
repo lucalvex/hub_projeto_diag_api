@@ -42,7 +42,7 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=255, unique=True)
     email = models.EmailField(max_length=255, unique=True)
     cnpj = BRCNPJField(max_length=14, unique=True)
-    cpf = models.CharField(max_length=14, unique=True, default="00000000000")
+    cpf = models.CharField(max_length=14, unique=False, default="00000000000")
     password = models.CharField(max_length=255)
 
     registration_date = models.DateTimeField(default=timezone.now)
