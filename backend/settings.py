@@ -170,13 +170,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.UserAccount'
 
 # Email settings
+import os
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = getenv('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = getenv('EMAIL_PORT', 587)
-EMAIL_USE_TLS = getenv('EMAIL_USE_TLS', True)
-EMAIL_HOST_USER = getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = getenv('EMAIL_HOST_PASSWORD')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.sendgrid.net')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))  # Converte para int
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ['true', '1', 't']  # Converte para bool
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'apikey')  # Lembre que SendGrid espera 'apikey'
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')  # Sua API Key SendGrid
+DEFAULT_FROM_EMAIL = 'lucalvex25@gmail.com' 
 
 DOMAIN = getenv('DOMAIN', 'http://localhost:8000')
 SITE_NAME = 'Projeto Diagnóstico'
