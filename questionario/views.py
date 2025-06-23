@@ -13,6 +13,8 @@ from django.db import transaction
 from django.http import JsonResponse
 from users.models import UserAccount
 from .models import Modulo, Dimensao, Pergunta, RespostaDimensao, RespostaModulo
+from .serializers import RelatorioSerializer
+from datetime import datetime
 from django.shortcuts import get_object_or_404
 import json
 import matplotlib.pyplot as plt
@@ -424,3 +426,21 @@ class GerarRelatorioModuloView(APIView):
                 {'error': f'Erro ao gerar o relatório PDF: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+class SearchRelatorio(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        data_str = request.GET.get('data')  # espera "YYYY-MM-DD"
+
+        if not data_str:
+            return Response({'error': 'Data não informada.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            data_obj = datetime.strptime(data_str, '%Y-%m-%d').date()
+        except ValueError:
+            return Response({'error': 'Formato de data inválido. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        relatorios = RespostaDimensao.objects.filter(data=data_obj)
+        serializer = RelatorioSerializer(relatorios, many=True)
+        return Response({'resultados': serializer.data})

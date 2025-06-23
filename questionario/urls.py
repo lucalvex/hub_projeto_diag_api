@@ -3,7 +3,8 @@ from .views import (
     QuestionarioView,
     SalvarRespostasModuloView,
     ModuloView,
-    GerarRelatorioModuloView
+    GerarRelatorioModuloView,
+    SearchRelatorio
 )
 
 urlpatterns = [
@@ -11,4 +12,5 @@ urlpatterns = [
     path('questionario/', QuestionarioView.as_view(), name='obter-questionario'),
     path('modulos/<str:nomeModulo>/respostas/', SalvarRespostasModuloView.as_view(), name='salvar_respostas_modulo'),
     path('modulos/<str:nomeModulo>/relatorio/', GerarRelatorioModuloView.as_view(), name='modulo-relatorio.pdf'),
+    path('relatorios/', SearchRelatorio.as_view(), name='relatorios')
 ]
