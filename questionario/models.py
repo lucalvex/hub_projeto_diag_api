@@ -29,7 +29,6 @@ class RespostaModulo(models.Model):
     dataResposta = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('usuario', 'modulo')
         verbose_name_plural = 'Respostas dos Módulos'
 
 

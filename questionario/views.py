@@ -11,7 +11,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.db import transaction
 from django.http import JsonResponse
-from users.models import UserAccount
+from django.utils import timezone
 from .models import Modulo, Dimensao, Pergunta, RespostaDimensao, RespostaModulo
 from .serializers import RelatorioSerializer
 from datetime import datetime
@@ -204,26 +204,25 @@ class SalvarRespostasModuloView(APIView):
 
         try:
             for dimensaoPk, somaTotal in somasPorDimensao.items():
-                respostaDimensaoObj, created = RespostaDimensao.objects.update_or_create(
+                RespostaDimensao.objects.update_or_create(
                     usuario=usuario,
                     dimensao_id=dimensaoPk,
                     defaults={'valorFinal': somaTotal}
                 )
                 dimensoesAtualizadas.append({
                     'dimensaoId': dimensaoPk,
-                    'tituloDimensao': respostaDimensaoObj.dimensao.titulo,
                     'valorFinal': somaTotal,
-                    'status': 'Criada' if created else 'Atualizada'
+                    'status': 'Criada ou Atualizada'
                 })
 
             valorFinalModulo = sum(somasPorDimensao.values())
 
-            respostaModuloObj, created_modulo = RespostaModulo.objects.update_or_create(
+            respostaModuloObj = RespostaModulo.objects.create(
                 usuario=usuario,
                 modulo=modulo,
-                defaults={'valorFinal': valorFinalModulo}
+                valorFinal=valorFinalModulo
             )
-            respostaModuloStatus = 'Criada' if created_modulo else 'Atualizada'
+            respostaModuloStatus = 'Criada'
 
         except Exception as e:
             return Response(
@@ -272,26 +271,36 @@ class GerarRelatorioModuloView(APIView):
         else:
             return "Fora da faixa de avaliação"
 
-    def get(self, request, nomeModulo):
+    def get(self, request, identificador):
         usuario = request.user
 
         try:
-            modulo = get_object_or_404(Modulo, nome=nomeModulo)
 
-            resposta_modulo = get_object_or_404(
-                RespostaModulo, usuario=usuario, modulo=modulo
-            )
+            if identificador.isdigit():
+                resposta_modulo = get_object_or_404(
+                    RespostaModulo, id=int(identificador), usuario=usuario
+                )
+                modulo = resposta_modulo.modulo
+            else:
+                modulo = get_object_or_404(
+                    Modulo, nome=identificador
+                )
 
+                resposta_modulo = RespostaModulo.objects.filter(
+                    usuario=usuario, modulo=modulo
+                ).order_by('-dataResposta').first()
+
+        
             respostas_dimensoes = RespostaDimensao.objects.filter(
                 usuario=usuario,
                 dimensao__modulo=modulo
             ).select_related('dimensao').order_by('dimensao__titulo')
 
             if not respostas_dimensoes.exists():
-                 return Response(
-                     {'error': f'Respostas das dimensões para o módulo "{nomeModulo}" não encontradas para este usuário.'},
-                     status=status.HTTP_404_NOT_FOUND
-                 )
+                return Response(
+                    {'error': f'Respostas das dimensões para o módulo "{modulo.nome}" não encontradas para este usuário.'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
 
             buffer = io.BytesIO()
             c = canvas.Canvas(buffer, pagesize=A4)
@@ -406,19 +415,19 @@ class GerarRelatorioModuloView(APIView):
 
             buffer.seek(0)
             response = HttpResponse(buffer, content_type='application/pdf')
-            filename = f"relatorio_{nomeModulo.replace(' ', '_')}_{usuario.username}.pdf"
+            filename = f"relatorio_{identificador.replace(' ', '_')}_{usuario.username}.pdf"
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
             return response
 
         except Modulo.DoesNotExist:
             return Response(
-                {'error': f'Módulo com nome "{nomeModulo}" não encontrado.'},
+                {'error': f'Módulo com nome "{modulo.nome}" não encontrado.'},
                 status=status.HTTP_404_NOT_FOUND
             )
         except RespostaModulo.DoesNotExist:
              return Response(
-                {'error': f'O usuário {usuario.username} ainda não respondeu ao módulo "{nomeModulo}".'},
+                {'error': f'O usuário {usuario.username} ainda não respondeu ao módulo "{modulo.nome}".'},
                 status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
@@ -441,6 +450,12 @@ class SearchRelatorio(APIView):
         except ValueError:
             return Response({'error': 'Formato de data inválido. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        relatorios = RespostaDimensao.objects.filter(data=data_obj)
+        start_datetime = timezone.make_aware(datetime.combine(data_obj, datetime.min.time()))
+        end_datetime = timezone.make_aware(datetime.combine(data_obj, datetime.max.time()))
+
+        relatorios = RespostaModulo.objects.filter(
+            usuario=request.user,
+            dataResposta__range=(start_datetime, end_datetime)
+        )
         serializer = RelatorioSerializer(relatorios, many=True)
         return Response({'resultados': serializer.data})
