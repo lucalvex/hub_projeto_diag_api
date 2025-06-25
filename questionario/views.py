@@ -1,5 +1,4 @@
 import io
-from django.http import HttpResponse
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import inch, cm
@@ -10,11 +9,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import HttpResponse
 from django.utils import timezone
 from .models import Modulo, Dimensao, Pergunta, RespostaDimensao, RespostaModulo
 from .serializers import RelatorioSerializer
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.shortcuts import get_object_or_404
 import json
 import matplotlib.pyplot as plt
@@ -459,3 +458,51 @@ class SearchRelatorio(APIView):
         )
         serializer = RelatorioSerializer(relatorios, many=True)
         return Response({'resultados': serializer.data})
+
+class SearchAllDatesRelatorio(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        user = request.user
+        datas = RespostaModulo.objects.filter(usuario=user) \
+            .order_by('dataResposta') \
+            .values_list('dataResposta', flat=True)
+        datas_formatadas = [data.isoformat() for data in datas]
+        return Response(datas_formatadas)
+
+class CheckDeadlineResponde(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, identificador):
+        usuario = request.user
+
+        try:
+            if identificador.isdigit():
+                modulo = get_object_or_404(Modulo, id=int(identificador))
+            else:
+                modulo = get_object_or_404(Modulo, nome=identificador)
+
+            ultima_resposta = RespostaModulo.objects.filter(
+                usuario=usuario, modulo=modulo
+            ).order_by('-dataResposta').first()
+
+            if ultima_resposta:
+                prazo_minimo = ultima_resposta.dataResposta + timedelta(days=2)
+                now = timezone.now()
+
+                if now < prazo_minimo:
+                    return Response({
+                        "ok_response": False,
+                        "message": f"Você só poderá responder novamente após {prazo_minimo.strftime('%d/%m/%Y às %H:%M')}."
+                    }, status=status.HTTP_200_OK)
+
+            return Response({
+                "ok_response": True,
+                "message": "Você pode responder este módulo novamente."
+            }, status=status.HTTP_200_OK)
+
+        except Modulo.DoesNotExist:
+            return Response(
+                {"error": "Módulo não encontrado."},
+                status=status.HTTP_404_NOT_FOUND
+            )
