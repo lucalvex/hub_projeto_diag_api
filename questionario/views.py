@@ -464,11 +464,17 @@ class SearchAllDatesRelatorio(APIView):
     
     def get(self, request):
         user = request.user
-        datas = RespostaModulo.objects.filter(usuario=user) \
+        registros = RespostaModulo.objects.filter(usuario=user) \
             .order_by('dataResposta') \
-            .values_list('dataResposta', flat=True)
-        datas_formatadas = [data.isoformat() for data in datas]
-        return Response(datas_formatadas)
+            .values('dataResposta', 'valorFinal')
+        
+        dados = [
+            {
+                "data": item['dataResposta'].date().isoformat(),
+                "valorFinal": item['valorFinal']
+            } for item in registros
+        ]
+        return Response(dados)
 
 class CheckDeadlineResponde(APIView):
     permission_classes = [IsAuthenticated]
