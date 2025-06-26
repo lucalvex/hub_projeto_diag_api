@@ -19,6 +19,7 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 from reportlab.lib.utils import ImageReader
+from django.db.models import OuterRef, Subquery
 
 
 class QuestionarioView(APIView):
@@ -512,3 +513,38 @@ class CheckDeadlineResponde(APIView):
                 {"error": "Módulo não encontrado."},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+class SearchLastDimensaoResultados(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        # Subquery que pega a última resposta (mais recente) para uma dimensão e usuário
+        ultima_resposta_subquery = RespostaDimensao.objects.filter(
+            usuario=user,
+            dimensao=OuterRef('pk')
+        ).order_by('-dataResposta')
+
+        # Pegamos as dimensões com suas últimas respostas do usuário
+        dimensoes_com_resposta = Dimensao.objects.filter(
+            respostas__usuario=user
+        ).distinct().annotate(
+            ultimo_valorFinal=Subquery(
+                ultima_resposta_subquery.values('valorFinal')[:1]
+            ),
+            ultima_dataResposta=Subquery(
+                ultima_resposta_subquery.values('dataResposta')[:1]
+            )
+        )
+
+        dados = [
+            {
+                "dimensao": dimensao.titulo,
+                "valorFinal": dimensao.ultimo_valorFinal,
+                "data": dimensao.ultima_dataResposta.date().isoformat() if dimensao.ultima_dataResposta else None
+            }
+            for dimensao in dimensoes_com_resposta
+        ]
+
+        return Response(dados)

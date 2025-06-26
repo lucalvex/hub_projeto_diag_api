@@ -6,7 +6,8 @@ from .views import (
     GerarRelatorioModuloView,
     SearchRelatorio,
     CheckDeadlineResponde,
-    SearchAllDatesRelatorio
+    SearchAllDatesRelatorio,
+    SearchLastDimensaoResultados
 )
 
 urlpatterns = [
@@ -17,4 +18,5 @@ urlpatterns = [
     path('relatorios/', SearchRelatorio.as_view(), name='relatorios'),
     path('questionario/<str:identificador>/check_deadline/', CheckDeadlineResponde.as_view(), name='check-deadline'),
     path('relatorios/datas/', SearchAllDatesRelatorio.as_view(), name='all-dates-relatorios'),
+     path('relatorios/dimensoes/', SearchLastDimensaoResultados.as_view(), name='all-dimensoes'),
 ]
