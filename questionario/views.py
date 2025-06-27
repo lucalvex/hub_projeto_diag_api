@@ -11,15 +11,19 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
+from django.db.models import OuterRef, Subquery, Exists, Value, Window, Max, F, Q, Avg
+from django.db.models.functions import Coalesce, RowNumber
 from .models import Modulo, Dimensao, Pergunta, RespostaDimensao, RespostaModulo
 from .serializers import RelatorioSerializer
 from datetime import datetime, timedelta
 from django.shortcuts import get_object_or_404
-import json
 import matplotlib.pyplot as plt
 import numpy as np
 from reportlab.lib.utils import ImageReader
-from django.db.models import OuterRef, Subquery
+
+# Aqui usamos uma query para pegar os últimos registros para todos usuários por dimensão
+from django.db.models import Window
+from django.db.models.functions import RowNumber
 
 
 class QuestionarioView(APIView):
@@ -514,37 +518,54 @@ class CheckDeadlineResponde(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+
 class SearchLastDimensaoResultados(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
 
-        # Subquery que pega a última resposta (mais recente) para uma dimensão e usuário
-        ultima_resposta_subquery = RespostaDimensao.objects.filter(
-            usuario=user,
-            dimensao=OuterRef('pk')
-        ).order_by('-dataResposta')
+        # Buscar dimensoes e última resposta do usuário logado
+        dimensoes = Dimensao.objects.all()
 
-        # Pegamos as dimensões com suas últimas respostas do usuário
-        dimensoes_com_resposta = Dimensao.objects.filter(
-            respostas__usuario=user
-        ).distinct().annotate(
-            ultimo_valorFinal=Subquery(
-                ultima_resposta_subquery.values('valorFinal')[:1]
-            ),
-            ultima_dataResposta=Subquery(
-                ultima_resposta_subquery.values('dataResposta')[:1]
+        dados = []
+
+        for d in dimensoes:
+            # Última resposta do usuário logado para essa dimensão
+            ultima_user = RespostaDimensao.objects.filter(
+                usuario=user,
+                dimensao=d
+            ).order_by('-dataResposta').first()
+
+            valor_final = ultima_user.valorFinal if ultima_user else None
+            data_resp = ultima_user.dataResposta if ultima_user else None
+
+            # Para outros usuários, buscar última resposta de cada um para essa dimensão
+            # Busca o id do usuário e a data mais recente para cada usuário (agrupamento)
+            ultimas_datas_outros = RespostaDimensao.objects.filter(
+                dimensao=d
+            ).exclude(usuario=user).values('usuario').annotate(
+                max_data=Max('dataResposta')
             )
-        )
 
-        dados = [
-            {
-                "dimensao": dimensao.titulo,
-                "valorFinal": dimensao.ultimo_valorFinal,
-                "data": dimensao.ultima_dataResposta.date().isoformat() if dimensao.ultima_dataResposta else None
-            }
-            for dimensao in dimensoes_com_resposta
-        ]
+            # Agora, para cada usuário, pega o valorFinal da última resposta
+            valores_outros = []
+            for entry in ultimas_datas_outros:
+                resposta = RespostaDimensao.objects.filter(
+                    usuario=entry['usuario'],
+                    dimensao=d,
+                    dataResposta=entry['max_data']
+                ).first()
+                if resposta:
+                    valores_outros.append(resposta.valorFinal)
+
+            media_outros = round(sum(valores_outros) / len(valores_outros), 2) if valores_outros else 0
+
+            dados.append({
+                "dimensao": d.titulo,
+                "valorFinal": valor_final,
+                "data": data_resp.date().isoformat() if data_resp else None,
+                "media": media_outros,
+            })
 
         return Response(dados)
