@@ -60,7 +60,6 @@ class RespostaDimensao(models.Model):
         Dimensao, on_delete=models.CASCADE, related_name='respostas', default=None)
 
     class Meta:
-        unique_together = ('usuario', 'dimensao')
         verbose_name_plural = 'Respostas das Dimensões'
 
 

@@ -3,7 +3,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import inch, cm
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import Paragraph, Spacer
+from reportlab.platypus import Paragraph
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -11,8 +11,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
-from django.db.models import OuterRef, Subquery, Exists, Value, Window, Max, F, Q, Avg
-from django.db.models.functions import Coalesce, RowNumber
+from django.db.models import Max
 from .models import Modulo, Dimensao, Pergunta, RespostaDimensao, RespostaModulo
 from .serializers import RelatorioSerializer
 from datetime import datetime, timedelta
@@ -20,11 +19,6 @@ from django.shortcuts import get_object_or_404
 import matplotlib.pyplot as plt
 import numpy as np
 from reportlab.lib.utils import ImageReader
-
-# Aqui usamos uma query para pegar os últimos registros para todos usuários por dimensão
-from django.db.models import Window
-from django.db.models.functions import RowNumber
-
 
 class QuestionarioView(APIView):
     # Permite não estar autenticado para testes
@@ -202,18 +196,18 @@ class SalvarRespostasModuloView(APIView):
                 'detalhes': erros,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        dimensoesAtualizadas = []
+        dimensoesCriadas = []
         respostaModuloStatus = None
         valorFinalModulo = 0
 
         try:
             for dimensaoPk, somaTotal in somasPorDimensao.items():
-                RespostaDimensao.objects.update_or_create(
-                    usuario=usuario,
+                RespostaDimensao.objects.create(
+                     usuario=usuario,
                     dimensao_id=dimensaoPk,
-                    defaults={'valorFinal': somaTotal}
+                    valorFinal=somaTotal
                 )
-                dimensoesAtualizadas.append({
+                dimensoesCriadas.append({
                     'dimensaoId': dimensaoPk,
                     'valorFinal': somaTotal,
                     'status': 'Criada ou Atualizada'
@@ -243,7 +237,7 @@ class SalvarRespostasModuloView(APIView):
                     'valorFinal': valorFinalModulo,
                     'status': respostaModuloStatus
                 },
-                'dimensoesAtualizadas': dimensoesAtualizadas
+                'dimensoesCriadas': dimensoesCriadas
             },
             status=status.HTTP_200_OK
         )
@@ -517,7 +511,6 @@ class CheckDeadlineResponde(APIView):
                 {"error": "Módulo não encontrado."},
                 status=status.HTTP_404_NOT_FOUND
             )
-
 
 class SearchLastDimensaoResultados(APIView):
     permission_classes = [IsAuthenticated]
