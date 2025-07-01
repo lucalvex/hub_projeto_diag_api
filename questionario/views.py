@@ -16,6 +16,8 @@ from .models import Modulo, Dimensao, Pergunta, RespostaDimensao, RespostaModulo
 from .serializers import RelatorioSerializer
 from datetime import datetime, timedelta
 from django.shortcuts import get_object_or_404
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from reportlab.lib.utils import ImageReader
@@ -291,7 +293,7 @@ class GerarRelatorioModuloView(APIView):
         
             respostas_dimensoes = RespostaDimensao.objects.filter(
                 usuario=usuario,
-                dimensao__modulo=modulo
+                resposta_modulo=resposta_modulo
             ).select_related('dimensao').order_by('dimensao__titulo')
 
             if not respostas_dimensoes.exists():
