@@ -7,7 +7,8 @@ from .views import (
     SearchRelatorio,
     CheckDeadlineResponde,
     SearchAllDatesRelatorio,
-    SearchLastDimensaoResultados
+    SearchLastDimensaoResultados,
+    RespostaModuloViewSet
 )
 
 urlpatterns = [
@@ -19,4 +20,5 @@ urlpatterns = [
     path('questionario/<str:identificador>/check_deadline/', CheckDeadlineResponde.as_view(), name='check-deadline'),
     path('relatorios/datas/', SearchAllDatesRelatorio.as_view(), name='all-dates-relatorios'),
      path('relatorios/dimensoes/', SearchLastDimensaoResultados.as_view(), name='all-dimensoes'),
+     path('relatorio/modulo/', RespostaModuloViewSet.as_view(), name='relatorio-modulo'),
 ]

@@ -5,6 +5,7 @@ from reportlab.lib.units import inch, cm
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph
 from rest_framework.views import APIView
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -13,7 +14,7 @@ from django.http import HttpResponse
 from django.utils import timezone
 from django.db.models import Max
 from .models import Modulo, Dimensao, Pergunta, RespostaDimensao, RespostaModulo
-from .serializers import RelatorioSerializer
+from .serializers import RelatorioSerializer, RespostaModuloSerializer
 from datetime import datetime, timedelta
 from django.shortcuts import get_object_or_404
 import matplotlib
@@ -564,3 +565,15 @@ class SearchLastDimensaoResultados(APIView):
             })
 
         return Response(dados)
+    
+class RespostaModuloViewSet(APIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = RespostaModuloSerializer
+
+    def get(self, request):
+        user = request.user
+        pk = request.GET.get('modulo_id')
+        resposta_modulo = get_object_or_404(RespostaModulo, id=pk, usuario=user)
+
+        serializer = RespostaModuloSerializer(resposta_modulo)
+        return Response(serializer.data)
