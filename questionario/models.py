@@ -1,14 +1,12 @@
 from django.db import models
 from users.models import UserAccount
 
-
 class Relatorio(models.Model):
     data = models.DateTimeField(auto_now_add=True)
     PATH = models.FileField(max_length=255)
 
     def __str__(self):
         return f"Relatório {self.id} - {self.data.strftime('%Y-%m-%d')}"
-
 
 class Modulo(models.Model):
     id = models.AutoField(primary_key=True)
@@ -20,7 +18,6 @@ class Modulo(models.Model):
     def __str__(self):
         return self.nome
 
-
 class RespostaModulo(models.Model):
     usuario = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
     modulo = models.ForeignKey(
@@ -29,7 +26,6 @@ class RespostaModulo(models.Model):
     dataResposta = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('usuario', 'modulo')
         verbose_name_plural = 'Respostas dos Módulos'
 
 
@@ -52,18 +48,16 @@ class Dimensao(models.Model):
     def __str__(self):
         return self.titulo
 
-
 class RespostaDimensao(models.Model):
     usuario = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
     valorFinal = models.IntegerField(default=0)
     dataResposta = models.DateTimeField(auto_now=True)
     dimensao = models.ForeignKey(
         Dimensao, on_delete=models.CASCADE, related_name='respostas', default=None)
+    resposta_modulo = models.ForeignKey(RespostaModulo, on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ('usuario', 'dimensao')
         verbose_name_plural = 'Respostas das Dimensões'
-
 
 class Pergunta(models.Model):
     id = models.AutoField(primary_key=True)
