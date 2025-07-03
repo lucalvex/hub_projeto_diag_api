@@ -575,5 +575,28 @@ class RespostaModuloViewSet(APIView):
         pk = request.GET.get('modulo_id')
         resposta_modulo = get_object_or_404(RespostaModulo, id=pk, usuario=user)
 
-        serializer = RespostaModuloSerializer(resposta_modulo)
-        return Response(serializer.data)
+        dimensoes = Dimensao.objects.all()
+
+        for d in dimensoes:
+
+            ultimas_datas_outros = RespostaDimensao.objects.filter(
+                    dimensao=d
+                ).exclude(usuario=user).values('usuario').annotate(
+                    max_data=Max('dataResposta')
+                )
+
+            # Agora, para cada usuário, pega o valorFinal da última resposta
+            valores_outros = []
+            for entry in ultimas_datas_outros:
+                resposta = RespostaDimensao.objects.filter(
+                    usuario=entry['usuario'],
+                    dimensao=d,
+                    dataResposta=entry['max_data']
+                ).first()
+                if resposta:
+                    valores_outros.append(resposta.valorFinal)
+
+            media_outros = round(sum(valores_outros) / len(valores_outros), 2) if valores_outros else 0
+            serializer = RespostaModuloSerializer(resposta_modulo, context={'media_outros': media_outros})
+        
+        return Response(serializer.data,)

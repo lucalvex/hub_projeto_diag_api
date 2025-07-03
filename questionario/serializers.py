@@ -54,3 +54,13 @@ class RespostaModuloSerializer(serializers.ModelSerializer):
     resposta_dimensoes = RespostaDimensao.objects.filter(resposta_modulo=obj)
     serializer = RespostaDimensaoSerializer(resposta_dimensoes, many=True)
     return serializer.data
+  
+  def to_representation(self, instance):
+    data = super().to_representation(instance)
+
+    # Aqui você calcula ou injeta a média dos outros usuários
+    media_outros = self.context.get('media_outros')
+    if media_outros:
+      data['media_outros'] = media_outros
+
+    return data
