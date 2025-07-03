@@ -14,7 +14,7 @@ class RelatorioSerializer(serializers.ModelSerializer):
 class DimensaoSerializer(serializers.ModelSerializer):
   class Meta:
     model = Dimensao
-    fields = ['titulo']
+    fields = ['id', 'titulo']
 
 class RespostaDimensaoSerializer(serializers.ModelSerializer):
   dimensao = DimensaoSerializer()
@@ -59,8 +59,8 @@ class RespostaModuloSerializer(serializers.ModelSerializer):
     data = super().to_representation(instance)
 
     # Aqui você calcula ou injeta a média dos outros usuários
-    media_outros = self.context.get('media_outros')
-    if media_outros:
-      data['media_outros'] = media_outros
+    media_dimensoes = self.context.get('media_dimensoes')
+    if media_dimensoes:
+      data['media_dimensoes'] = media_dimensoes
 
     return data

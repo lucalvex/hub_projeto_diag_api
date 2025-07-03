@@ -576,6 +576,7 @@ class RespostaModuloViewSet(APIView):
         resposta_modulo = get_object_or_404(RespostaModulo, id=pk, usuario=user)
 
         dimensoes = Dimensao.objects.all()
+        media_dimensoes = {}
 
         for d in dimensoes:
 
@@ -597,6 +598,9 @@ class RespostaModuloViewSet(APIView):
                     valores_outros.append(resposta.valorFinal)
 
             media_outros = round(sum(valores_outros) / len(valores_outros), 2) if valores_outros else 0
-            serializer = RespostaModuloSerializer(resposta_modulo, context={'media_outros': media_outros})
+            media_dimensoes[d.id] = media_outros
+            
+        media_dimensoes_str = {str(k): v for k, v in media_dimensoes.items()}
+        serializer = RespostaModuloSerializer(resposta_modulo, context={'media_dimensoes': media_dimensoes_str})
         
         return Response(serializer.data,)
