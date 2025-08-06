@@ -28,6 +28,17 @@ class RespostaModulo(models.Model):
     class Meta:
         verbose_name_plural = 'Respostas dos Módulos'
 
+class RespostaModuloIncompleta(models.Model):
+    usuario = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+    modulo = models.ForeignKey(Modulo, on_delete=models.CASCADE, related_name='respostas_incompletas', default=None)
+    respostas = models.JSONField(default=dict)
+    dataResposta = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = 'Respostas Incompletas dos Módulos'
+
+    unique_together = (('usuario', 'modulo'),)
+
 
 class Dimensao(models.Model):
     TIPO_CHOICES = [

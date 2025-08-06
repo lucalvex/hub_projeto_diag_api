@@ -5,7 +5,6 @@ from reportlab.lib.units import inch, cm
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph
 from rest_framework.views import APIView
-from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -13,7 +12,7 @@ from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
 from django.db.models import Max
-from .models import Modulo, Dimensao, Pergunta, RespostaDimensao, RespostaModulo
+from .models import Modulo, Dimensao, Pergunta, RespostaDimensao, RespostaModulo, RespostaModuloIncompleta
 from .serializers import RelatorioSerializer, RespostaModuloSerializer
 from datetime import datetime, timedelta
 from django.shortcuts import get_object_or_404
@@ -68,6 +67,7 @@ class ModuloView(APIView):
 
     def get(self, request, nomeModulo):
         try:
+            usuario = request.user if request.user.is_authenticated else None
             moduloObj = get_object_or_404(
                 Modulo.objects.prefetch_related('dimensoes__perguntas'),
                 nome=nomeModulo
@@ -91,10 +91,29 @@ class ModuloView(APIView):
                     'perguntas': perguntasData
                 }
                 dadosDimensoes.append(dados_dimensao)
+            
+            nextDimensionIndex = 0
+            if usuario:
+                resposta_incompleta = RespostaModuloIncompleta.objects.filter(usuario=usuario, modulo=moduloObj).first()
+                if resposta_incompleta and resposta_incompleta.respostas:
+                    respondidas = list(resposta_incompleta.respostas.keys())
+                    for idx, dim in enumerate(dadosDimensoes):
+                        if dim['dimensaoTitulo'] not in respondidas:
+                            nextDimensionIndex = idx
+                            break
+                    else:
+                        nextDimensionIndex = len(dadosDimensoes)
+            
+            respondidas = []
+            if resposta_incompleta and resposta_incompleta.respostas:
+                respondidas = list(resposta_incompleta.respostas.keys())
 
             response_data = {
                 'nomeModulo': moduloObj.nome,
-                'dimensoes': dadosDimensoes
+                'dimensoes': dadosDimensoes,
+                'nextDimensionIndex': nextDimensionIndex,
+                'respondidads': respondidas,
+                'respostasIncompletas': resposta_incompleta.respostas if resposta_incompleta else {},
             }
 
             return Response(response_data, status=status.HTTP_200_OK)
@@ -157,22 +176,22 @@ class SalvarRespostasModuloView(APIView):
                 erros.append(f"Item {idx+1}: Não é um objeto JSON válido.")
                 continue
 
-            perguntaId = resposta_info.get('perguntaId')
+            perguntaId = resposta_info.get('id')
             valor = resposta_info.get('valor')
 
             if perguntaId is None:
-                erros.append(f"Item {idx+1}: Chave 'perguntaId' ausente.")
+                erros.append(f"Item {idx+1}: Chave 'id' ausente.")
                 continue
             if valor is None:
                 erros.append(
-                    f"Item {idx+1} (Pergunta ID {perguntaId}): Chave 'valor' ausente.")
+                    f"Item {idx+1} (ID {perguntaId}): Chave 'valor' ausente.")
                 continue
 
             try:
                 valor_int = int(valor)
             except (ValueError, TypeError):
                 erros.append(
-                    f"Item {idx+1} (Pergunta ID {perguntaId}): 'valor' deve ser um número inteiro (recebeu '{valor}').")
+                    f"Item {idx+1} (ID {perguntaId}): 'valor' deve ser um número inteiro (recebeu '{valor}').")
                 continue
 
             perguntaObj = mapa_perguntas_validas.get(perguntaId)
@@ -204,19 +223,6 @@ class SalvarRespostasModuloView(APIView):
         valorFinalModulo = 0
 
         try:
-            for dimensaoPk, somaTotal in somasPorDimensao.items():
-                RespostaDimensao.objects.create(
-                     usuario=usuario,
-                    dimensao_id=dimensaoPk,
-                    valorFinal=somaTotal
-                )
-                dimensoesCriadas.append({
-                    'dimensaoId': dimensaoPk,
-                    'valorFinal': somaTotal,
-                    'status': 'Criada ou Atualizada'
-                })
-
-            valorFinalModulo = sum(somasPorDimensao.values())
 
             respostaModuloObj = RespostaModulo.objects.create(
                 usuario=usuario,
@@ -224,6 +230,23 @@ class SalvarRespostasModuloView(APIView):
                 valorFinal=valorFinalModulo
             )
             respostaModuloStatus = 'Criada'
+        
+            for dimensaoPk, somaTotal in somasPorDimensao.items():
+                RespostaDimensao.objects.create(
+                    usuario=usuario,
+                    dimensao_id=dimensaoPk,
+                    valorFinal=somaTotal,
+                    resposta_modulo=respostaModuloObj
+                )
+                dimensoesCriadas.append({
+                    'dimensaoId': dimensaoPk,
+                    'valorFinal': somaTotal,
+                    'status': 'Criada'
+                })
+
+            valorFinalModulo = sum(somasPorDimensao.values())
+            respostaModuloObj.valorFinal = valorFinalModulo
+            respostaModuloObj.save()
 
         except Exception as e:
             return Response(
@@ -245,6 +268,37 @@ class SalvarRespostasModuloView(APIView):
             status=status.HTTP_200_OK
         )
 
+class SalvarRespostaIncompletaView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        usuario = request.user
+        nome_modulo = request.data.get('nomeModulo')
+        dimensao_titulo = request.data.get('dimensaoTitulo')
+        respostas = request.data.get('respostas')
+
+        if not nome_modulo or not dimensao_titulo or not isinstance(respostas, list):
+            return Response({'error': 'Dados insuficientes.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        modulo = get_object_or_404(Modulo, nome=nome_modulo)
+        dimensao = get_object_or_404(Dimensao, titulo=dimensao_titulo, modulo=modulo)
+
+        registro_dimensao = {
+            'dimensao': dimensao.titulo,
+            'respostas': respostas
+        }
+        obj, created = RespostaModuloIncompleta.objects.get_or_create(
+            usuario=usuario,
+            modulo=modulo,
+            defaults={'respostas': {}}
+        )
+        dados = obj.respostas or {}
+        dados[dimensao.titulo] = registro_dimensao
+        obj.respostas = dados
+        obj.save()
+
+        return Response({'message': 'Respostas incompletas salvas com sucesso.'}, status=status.HTTP_200_OK)
+    
 class GerarRelatorioModuloView(APIView):
     permission_classes = [IsAuthenticated]
 
